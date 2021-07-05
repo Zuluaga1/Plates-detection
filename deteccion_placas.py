@@ -24,7 +24,7 @@ cap = cv2.VideoCapture(0,cv2.CAP_DSHOW) # mostrar toda la ventana
 placa = []
 n = True
 m = [0,0]
-s = 0 #0 si entra 1 si va saliendo
+s = 1 #0 si entra 1 si va saliendo
 #def main():
 
 while n == True:
@@ -59,28 +59,24 @@ while n == True:
               for caracter in quitar: #quitar espacios y caracteres extraños
                   text = text.replace(caracter, "")
               probando1 = text.split()
-              texto = ' '.join([str(item) for item in probando1])
-              print('PLACA: ',text)
-              cv2.imshow('PLACA',placa)
+              texto = ' '.join([str(item) for item in probando1]) #unir texto sin espacios
+              print('PLACA: ',text) #imprimir placa
+              #placa.save("placa.jpg") #guardar placa
+              cv2.imshow('PLACA',placa) # mostrar placa
               cv2.moveWindow('PLACA',780,10) #pos de la placa
-              cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),3)
+              cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),3) #rectángulo verde para detectar
               cv2.putText(frame,text,(x-20,y-10),1,2.2,(0,255,0),3)
               if (s == 0): #entrando
                 #if (probando[0].isalpha() == True) & (probando[1].isnumeric()) & (len(probando[1])==3) & len(probando[0])==3:
-                #print("alooooooooooooo")
-                numero_placa = base.select_all() #read db
+                numero_placa = base.select_all() #read db y poner los nombres de headers.
                 numero_placa = pd.DataFrame(numero_placa,columns=("index",
                                                                   "PLACA", "FECHA"))
-                #entrada = pd.read_excel('carros.xlsx')
-                blanca = pd.read_excel('blanca.xlsx')
+                blanca = pd.read_excel('blanca.xlsx') #leer placas permitidas
                 placa_blanca = blanca['PLACA'] == texto
-                #placa_blanca = numero_placa['PLACA'] == texto
-                if (placa_blanca == True).any():
+                if (placa_blanca == True).any(): #mirar si está en placas permitidas
                     print('lista blanca')
-                    n = False
-                    #pos = entrada.iloc[0][0]
-                    #pos1 = pos + 1
-                    time = datetime.datetime.now()
+                    n = False #salir del loop infinito del while
+                    time = datetime.datetime.now() #tiempo actual
                     valor = numero_placa['PLACA'] == texto
                     if (valor == True).any():
                         print("no se agrega a la base de datos")
@@ -91,27 +87,10 @@ while n == True:
                         data = "El usuario con placa {} ha guardado el auto en la fecha {}".format(str(formato),time)
                         imagen = qrcode.make(data)
                         imagen.save("qrcode.jpg")
-                        
-                        """
-                        df = pd.DataFrame({"placa":probando1, 
-                                           "time":time})
-                        
-                        book = load_workbook('carros.xlsx')
-                        writer = pd.ExcelWriter('carros.xlsx', engine='openpyxl') 
-                        writer.book = book
-                        ws = book.active #para escribir en el excel
-                        pandas.io.formats.excel.header_style = None
-                        writer.sheets = dict((ws.title, ws) for ws in book.worksheets)
-                        df.to_excel(writer, book.worksheets[0].title,startcol=1,
-                                    index = False, startrow=pos1, header=False)
-                        ws['A2'] = pos1
-                        writer.save()
-                        """
                             
               elif s == 1:  #saliendo
                
                 blanca = pd.read_excel('blanca.xlsx')
-                #salida = pd.DataFrame(salida)
                 time1 = datetime.datetime.now()
                 numero_placa = base.select_all() #read db
                 numero_placa = pd.DataFrame(numero_placa,columns=("index",
@@ -148,11 +127,12 @@ while n == True:
                         total = round(factura,0)
                         
                         print("el tiempo del vehículo con placas {} fue de {}".format(texto,tiempo[-1])) 
-                        print("El usuario deberá pagar un total de ",total)
+                        print("El usuario deberá pagar un total de ",total," pesos")
                       
     cv2.imshow('frame', frame)
     k = cv2.waitKey(10)
         #if k == 5:
          #   break
 cap.release()
+base.close()
 cv2.destroyAllWindows()
