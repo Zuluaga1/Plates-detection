@@ -9,7 +9,7 @@ import cv2
 import pytesseract
 import pandas as pd
 #import openpyxl
-from openpyxl import load_workbook
+#from openpyxl import load_workbook
 import pandas.io.formats.excel
 #from datetime import datetime
 #from datetime import datetime, timedelta
@@ -17,14 +17,20 @@ import pandas.io.formats.excel
 import datetime
 from src.database import *
 import qrcode
+import socket
 
+HOST1 = '192.168.1.85'
+HOST = '192.168.1.85'  # Standard loopback interface address (localhost)
+PORT = 10840        # Port to listen on (non-privileged ports are > 1023)
+PORT1 = 10841
+soc=True
 pytesseract.pytesseract.tesseract_cmd = r'D:/tesseract/tesseract'
 base = DataBase()
 cap = cv2.VideoCapture(0,cv2.CAP_DSHOW) # mostrar toda la ventana
 placa = []
 n = True
 m = [0,0]
-s = 1 #0 si entra 1 si va saliendo
+s = 0 #0 si entra 1 si va saliendo
 #def main():
 
 while n == True:
@@ -70,7 +76,7 @@ while n == True:
                 #if (probando[0].isalpha() == True) & (probando[1].isnumeric()) & (len(probando[1])==3) & len(probando[0])==3:
                 numero_placa = base.select_all() #read db y poner los nombres de headers.
                 numero_placa = pd.DataFrame(numero_placa,columns=("index",
-                                                                  "PLACA", "FECHA"))
+                                                                  "PLACA", "FECHA","rol"))
                 blanca = pd.read_excel('blanca.xlsx') #leer placas permitidas
                 placa_blanca = blanca['PLACA'] == texto
                 if (placa_blanca == True).any(): #mirar si está en placas permitidas
@@ -81,12 +87,32 @@ while n == True:
                     if (valor == True).any():
                         print("no se agrega a la base de datos")
                     else:
-                        print("si agrega a la base de datos")
-                        base.insert(texto,time) #insert into db
-                        formato = texto[:3]+" "+texto[-3:]
-                        data = "El usuario con placa {} ha guardado el auto en la fecha {}".format(str(formato),time)
-                        imagen = qrcode.make(data)
-                        imagen.save("qrcode.jpg")
+                        print("estableciendo conexión con el cliente")
+                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                            s.bind((HOST, PORT))
+                            s.listen()
+                            conn, addr = s.accept()
+                            with conn:
+                                print('Connected by', addr)
+                                while soc == True:
+                                    placa_recivida = conn.recv(1024)
+                                    print(placa_recivida)
+                                    placa_recivida = str(placa_recivida, "utf-8")
+                                    if placa_recivida != 0:
+                                        soc=False
+                                        placa_recivida = placa_recivida.split(',')
+                                        placa_blanca = blanca['PLACA'] == placa_recivida[1]
+                                        if (placa_blanca == True).any():
+                                            print("si agrega a la base de datos")
+                                            base.insert(texto,time) #insert into db
+                                            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                                                s.connect((HOST, PORT1))
+                                                s.sendall(b'1')
+                                                data = s.recv(1024)
+                                            print("Sensores activados correctamente")
+                                        else:
+                                            print("Usuario no concuerda con PLACA")
+                                        
                             
               elif s == 1:  #saliendo
                
